@@ -1,0 +1,162 @@
+name: Build Unsigned IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Unsigned IPA
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_15.4.app 2>/dev/null || true
+          xcodebuild -version
+
+      - name: Install CocoaPods
+        run: |
+          if ! command -v pod &> /dev/null; then
+            gem install cocoapods --no-document
+          fi
+          pod --version
+
+      - name: Pod Install
+        working-directory: SpotifyCloneProject
+        run: pod install
+
+      - name: Build Archive (unsigned)
+        working-directory: SpotifyCloneProject
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -workspace SpotifyClone.xcworkspace \
+            -scheme SpotifyClone \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/SpotifyClone.xcarchive" \
+            -destination "generic/platform=iOS" \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            ENABLE_BITCODE=NO \
+            STRIP_SWIFT_SYMBOLS=YES \
+            ONLY_ACTIVE_ARCH=YES \
+            GENERATE_INFOPLIST_FILE=NO \
+            2>&1 | tee /tmp/build.log
+
+      - name: Verify Archive and Fix Info.plist
+        run: |
+          ARCHIVE_PATH="$RUNNER_TEMP/SpotifyClone.xcarchive"
+          APP_PATH="$ARCHIVE_PATH/Products/Applications/SpotifyClone.app"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Looking for .app in archive..."
+            APP_PATH=$(find "$ARCHIVE_PATH" -name "*.app" -type d | head -1)
+            if [ -z "$APP_PATH" ]; then
+              echo "Trying DerivedData fallback..."
+              APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "SpotifyClone.app" -path "*/Build/Products/Release-iphoneos/*" | head -1)
+            fi
+          fi
+
+          if [ -z "$APP_PATH" ] || [ ! -d "$APP_PATH" ]; then
+            echo "ERROR: SpotifyClone.app not found!"
+            find ~/Library/Developer/Xcode/DerivedData -name "*.app" -type d 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "Found app at: $APP_PATH"
+          echo "Contents of app bundle:"
+          ls -la "$APP_PATH/"
+
+          # Check if Info.plist exists in the app bundle
+          if [ ! -f "$APP_PATH/Info.plist" ]; then
+            echo "WARNING: Info.plist not found in app bundle! Fixing..."
+            SOURCE_PLIST="$GITHUB_WORKSPACE/SpotifyCloneProject/SpotifyClone/Info.plist"
+            if [ -f "$SOURCE_PLIST" ]; then
+              cp "$SOURCE_PLIST" "$APP_PATH/Info.plist"
+              # Ensure CFBundleExecutable is set
+              /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string SpotifyClone" "$APP_PATH/Info.plist" 2>/dev/null || \
+                /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable SpotifyClone" "$APP_PATH/Info.plist" 2>/dev/null || true
+              echo "Info.plist copied from source."
+            else
+              echo "Creating minimal Info.plist..."
+              cat > "$APP_PATH/Info.plist" << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key>
+            <string>SpotifyClone</string>
+            <key>CFBundleDisplayName</key>
+            <string>SpotifyClone</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.spotifyclone.app</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0</string>
+            <key>CFBundleExecutable</key>
+            <string>SpotifyClone</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>MinimumOSVersion</key>
+            <string>14.0</string>
+            <key>UIUserInterfaceStyle</key>
+            <string>Dark</string>
+            <key>UILaunchScreen</key>
+            <dict/>
+            <key>UISupportedInterfaceOrientations</key>
+            <array>
+              <string>UIInterfaceOrientationPortrait</string>
+            </array>
+          </dict>
+          </plist>
+          PLIST
+            fi
+          else
+            echo "Info.plist found in app bundle - OK"
+          fi
+
+          # Verify binary
+          if [ ! -f "$APP_PATH/SpotifyClone" ]; then
+            echo "ERROR: SpotifyClone binary not found!"
+            ls -la "$APP_PATH/"
+            exit 1
+          fi
+          echo "Binary size: $(du -h "$APP_PATH/SpotifyClone" | cut -f1)"
+          echo "App bundle size: $(du -sh "$APP_PATH" | cut -f1)"
+          echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
+
+      - name: Create Unsigned IPA
+        run: |
+          IPA_DIR=$(mktemp -d)
+          mkdir -p "$IPA_DIR/Payload"
+          cp -R "$APP_PATH" "$IPA_DIR/Payload/"
+
+          if [ ! -f "$IPA_DIR/Payload/SpotifyClone.app/Info.plist" ]; then
+            echo "ERROR: Info.plist missing in IPA Payload!"
+            exit 1
+          fi
+
+          cd "$IPA_DIR"
+          zip --symlinks -r "$RUNNER_TEMP/SpotifyClone.ipa" Payload/
+          echo "IPA created!"
+          ls -lh "$RUNNER_TEMP/SpotifyClone.ipa"
+
+          # Verify IPA contents
+          echo "IPA contents:"
+          unzip -l "$RUNNER_TEMP/SpotifyClone.ipa" | grep -E "(Info\.plist|SpotifyClone$)" | head -5
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpotifyClone-Unsigned-IPA
+          path: ${{ runner.temp }}/SpotifyClone.ipa
+          retention-days: 30
