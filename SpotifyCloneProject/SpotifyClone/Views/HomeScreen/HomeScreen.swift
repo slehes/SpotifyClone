@@ -48,7 +48,7 @@ struct HomeScreen: View {
     @State var scrollViewPosition = CGFloat.zero
 
     var body: some View {
-      RadialGradientBackground(color: Color(homeVM.imageColorModel.image?.averageColor ?? UIColor.spotifyDarkGray))
+      RadialGradientBackground(color: Color(homeVM.imageColorModel.image?.averageColor ?? UIColor(red: 0.11, green: 0.11, blue: 0.12, alpha: 1.0)))
 
       if didEverySectionLoaded() == false {
         ProgressView()
