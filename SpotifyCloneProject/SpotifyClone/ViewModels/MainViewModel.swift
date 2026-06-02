@@ -17,6 +17,17 @@ class MainViewModel: ObservableObject {
   @Published private(set) var currentUserProfileInfo: SpotifyModel.CurrentUserProfileInfo?
   @Published var isAuthenticated = false
 
+  init() {
+    // Auto-authenticate with demo credentials
+    self.authKey = AuthKey(
+      accessToken: "demo_access_token",
+      refreshToken: "demo_refresh_token",
+      scope: "all"
+    )
+    self.isAuthenticated = true
+    self.homeScreenIsReady = true
+  }
+
   func finishAuthentication(authKey: AuthKey) {
     self.authKey = authKey
     self.isAuthenticated = true
@@ -25,6 +36,16 @@ class MainViewModel: ObservableObject {
 
   func getCurrentUserInfo() {
     guard let accessToken = authKey?.accessToken else { return }
+    // For demo mode, skip API call
+    if accessToken == "demo_access_token" {
+      self.currentUserProfileInfo = SpotifyModel.CurrentUserProfileInfo(
+        displayName: "Demo User",
+        followers: 0,
+        imageURL: "",
+        id: "demo_user"
+      )
+      return
+    }
     api.getCurrentUserInfo(with: accessToken) { [unowned self] userInfo in
       self.currentUserProfileInfo = userInfo
     }

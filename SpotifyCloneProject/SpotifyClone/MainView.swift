@@ -9,18 +9,15 @@ import SwiftUI
 
 struct MainView: View {
   @StateObject var mainVM: MainViewModel
-  @StateObject var authVM: AuthViewModel
   @StateObject var homeVM: HomeViewModel
   @StateObject var myLibraryVM: MyLibraryViewModel
   @StateObject var searchVM: SearchViewModel
   @StateObject var mediaDetailVM: MediaDetailViewModel
 
   @StateObject var activeSearchVM = ActiveSearchViewModel()
-  @State private var showAuthSheet = false
 
   init(mainViewModel: MainViewModel) {
     _mainVM = StateObject(wrappedValue: mainViewModel)
-    _authVM = StateObject(wrappedValue: AuthViewModel(mainViewModel: mainViewModel))
     _homeVM = StateObject(wrappedValue: HomeViewModel(mainViewModel: mainViewModel))
     _myLibraryVM = StateObject(wrappedValue: MyLibraryViewModel(mainViewModel: mainViewModel))
     _searchVM = StateObject(wrappedValue: SearchViewModel(mainVM: mainViewModel))
@@ -47,20 +44,14 @@ struct MainView: View {
       }
       BottomBar(mainVM: mainVM, showMediaPlayer: mainVM.showBottomMediaPlayer)
     }
-    .onAppear { mainVM.getCurrentUserInfo() }
+    .onAppear { 
+      mainVM.getCurrentUserInfo()
+      homeVM.fetchHomeData()
+    }
     .onChange(of: mainVM.currentPage) { _ in cleanAllPages() }
     .onChange(of: mainVM.currentPageWasRetapped) { _ in goToNoneSubview() }
     .navigationBarTitle("")
     .navigationBarHidden(true)
-    .sheet(isPresented: $showAuthSheet) {
-      AuthSheetView(authViewModel: authVM, isShowingSheetView: $showAuthSheet)
-    }
-    .onChange(of: mainVM.isAuthenticated) { authenticated in
-      if authenticated {
-        showAuthSheet = false
-        homeVM.fetchHomeData()
-      }
-    }
   }
 
   private func cleanAllPages() {

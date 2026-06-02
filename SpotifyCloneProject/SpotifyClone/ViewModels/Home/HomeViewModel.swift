@@ -80,6 +80,16 @@ class HomeViewModel: ObservableObject {
       return
     }
 
+    // Skip API calls in demo mode
+    if accessToken == "demo_access_token" {
+      // Show demo/placeholder content
+      for section in isLoading.keys {
+        isLoading[section] = false
+        mediaCollection[section] = []
+      }
+      return
+    }
+
     fetchDataFor(.smallSongCards, with: accessToken)
     fetchDataFor(.newReleases, with: accessToken)
     fetchDataFor(.topPodcasts, with: accessToken)
