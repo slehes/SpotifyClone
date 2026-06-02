@@ -131,8 +131,12 @@ class HomeViewModel: ObservableObject {
             // Otherwise, the home screen UI won't look good.
             let todayHitsPlaylistID = "37i9dQZF1DXcBWIGoYBM5M"
             api.getTrack(using: .tracksFromPlaylist(playlistID: todayHitsPlaylistID), with: accessToken) { topTracks in
-              trimAndCommunicateResult(section: section, medias: topTracks)
-              setImageColorModelBasedOn(topTracks[0].imageURL)
+              if !topTracks.isEmpty {
+                trimAndCommunicateResult(section: section, medias: topTracks)
+                setImageColorModelBasedOn(topTracks[0].imageURL)
+              } else {
+                trimAndCommunicateResult(section: section, medias: [])
+              }
             }
 
           } else {
@@ -207,7 +211,8 @@ class HomeViewModel: ObservableObject {
         case .playlistRewind70s:
           keyWord += "197_"
         default:
-          fatalError("Year not defined or the section is not a year.")
+          print("Warning: Unknown playlist section.")
+          keyWord = ""
         }
 
         api.getPlaylist(using: .playlistWithKeyword(keyWord: keyWord), with: accessToken) { playlists in
@@ -233,7 +238,8 @@ class HomeViewModel: ObservableObject {
           }
         }
       default:
-        fatalError("Tried to fetch data for a type not specified in the function declaration(fetchDataFor).")
+        print("Warning: Unknown section type requested")
+        trimAndCommunicateResult(section: section, medias: [])
 
       }
     }

@@ -259,11 +259,12 @@ struct Utility {
   static func getResponseStatusCode<AnyDecodable: Decodable>(forValue: AnyDecodable?, responseItemsCount: Int?) -> ResponseStatus {
 
     guard forValue != nil else {
-      fatalError("Error receiving tracks from API.")
+      print("Warning: Error receiving tracks from API.")
+      return .empty
     }
 
     guard responseItemsCount != 0 else {
-      print("The API response was corrects but empty. We'll just return []")
+      print("The API response was correct but empty. Returning empty array.")
       return .empty
     }
 
