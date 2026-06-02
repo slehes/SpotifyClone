@@ -39,7 +39,8 @@ class SearchViewModel: ObservableObject {
 
   func getCategoriesData() {
     DispatchQueue.main.async {
-      self.api.getPlaylists(accessToken: self.mainVM.authKey!.accessToken) { [unowned self] categoryItems in
+      guard let accessToken = self.mainVM.authKey?.accessToken else { return }
+      self.api.getPlaylists(accessToken: accessToken) { [unowned self] categoryItems in
 
         // Generate the cards' color here to stop the random
         // color from being changed every time the view updates.
@@ -91,7 +92,7 @@ class SearchViewModel: ObservableObject {
       case .detail(let mediaDetailVM, let data):
         mediaDetailVM.cleanAll()
         mediaDetailVM.mainItem = data
-        mediaDetailVM.accessToken = self.mainVM.authKey!.accessToken
+        mediaDetailVM.accessToken = self.mainVM.authKey?.accessToken
         mediaDetailVM.setImageColorModelBasedOn(data.imageURL)
       }
       self.currentSubPage = subPage

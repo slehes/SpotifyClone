@@ -51,7 +51,9 @@ struct BigSongCoversScrollView: View {
                           mediaType: media.mediaType)
                 .onAppear {
                   if mediaDetailVM.shouldFetchMoreData(basedOn: media, inRelationTo: medias) {
-                    homeVM.fetchDataFor(section, with: homeVM.mainVM.authKey!.accessToken)
+                    if let accessToken = homeVM.mainVM.authKey?.accessToken {
+                      homeVM.fetchDataFor(section, with: accessToken)
+                    }
                   }
 
                   homeVM.homeCachedImageURLs.append(media.imageURL)

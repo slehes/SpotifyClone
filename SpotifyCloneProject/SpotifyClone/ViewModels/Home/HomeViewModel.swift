@@ -71,24 +71,29 @@ class HomeViewModel: ObservableObject {
   func fetchHomeData() {
     for dictKey in isLoading.keys { isLoading[dictKey] = true }
 
-    if mainVM.authKey != nil {
-      let accessToken = mainVM.authKey!.accessToken
-
-      fetchDataFor(.smallSongCards, with: accessToken)
-      fetchDataFor(.newReleases, with: accessToken)
-      fetchDataFor(.topPodcasts, with: accessToken)
-      fetchDataFor(.recentlyPlayed, with: accessToken)
-      fetchDataFor(.userFavoriteTracks, with: accessToken)
-      fetchDataFor(.userFavoriteArtists, with: accessToken)
-      fetchDataFor(.featuredPlaylists, with: accessToken)
-      fetchDataFor(.playlistThisIsX, with: accessToken)
-      fetchDataFor(.artistTopTracks, with: accessToken)
-      fetchDataFor(.playlistRewind70s, with: accessToken)
-      fetchDataFor(.playlistRewind80s, with: accessToken)
-      fetchDataFor(.playlistRewind90s, with: accessToken)
-      fetchDataFor(.playlistRewind2000s, with: accessToken)
-      fetchDataFor(.playlistRewind2010s, with: accessToken)
+    guard let accessToken = mainVM.authKey?.accessToken else {
+      // Not authenticated — mark all sections as loaded with empty data
+      for section in isLoading.keys {
+        isLoading[section] = false
+        mediaCollection[section] = []
+      }
+      return
     }
+
+    fetchDataFor(.smallSongCards, with: accessToken)
+    fetchDataFor(.newReleases, with: accessToken)
+    fetchDataFor(.topPodcasts, with: accessToken)
+    fetchDataFor(.recentlyPlayed, with: accessToken)
+    fetchDataFor(.userFavoriteTracks, with: accessToken)
+    fetchDataFor(.userFavoriteArtists, with: accessToken)
+    fetchDataFor(.featuredPlaylists, with: accessToken)
+    fetchDataFor(.playlistThisIsX, with: accessToken)
+    fetchDataFor(.artistTopTracks, with: accessToken)
+    fetchDataFor(.playlistRewind70s, with: accessToken)
+    fetchDataFor(.playlistRewind80s, with: accessToken)
+    fetchDataFor(.playlistRewind90s, with: accessToken)
+    fetchDataFor(.playlistRewind2000s, with: accessToken)
+    fetchDataFor(.playlistRewind2010s, with: accessToken)
   }
 
   // MARK: - Fetch Data From API
@@ -298,7 +303,7 @@ class HomeViewModel: ObservableObject {
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
       mediaDetailVM.cleanAll()
       mediaDetailVM.mainItem = data
-      mediaDetailVM.accessToken = self.mainVM.authKey!.accessToken
+      mediaDetailVM.accessToken = self.mainVM.authKey?.accessToken
       mediaDetailVM.setImageColorModelBasedOn(data.imageURL)
       self.currentSubPage = subPage
     }

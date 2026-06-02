@@ -48,7 +48,7 @@ struct HomeScreen: View {
     @State var scrollViewPosition = CGFloat.zero
 
     var body: some View {
-      RadialGradientBackground(color: Color(homeVM.imageColorModel.image?.averageColor! ?? UIColor.clear))
+      RadialGradientBackground(color: Color(homeVM.imageColorModel.image?.averageColor ?? UIColor.spotifyDarkGray))
 
       if didEverySectionLoaded() == false {
         ProgressView()
@@ -68,8 +68,11 @@ struct HomeScreen: View {
                                         showArtistName: true)
                 BigSongCoversScrollView(section: .userFavoriteTracks)
                 BigSongCoversScrollView(section: .topPodcasts)
-                BigSongCoversScrollView(section: .featuredPlaylists,
-                                        sectionTitle: homeVM.mediaCollection[.featuredPlaylists]!.first!.previewURL)
+                if let featuredPlaylists = homeVM.mediaCollection[.featuredPlaylists],
+                   let firstPlaylist = featuredPlaylists.first {
+                  BigSongCoversScrollView(section: .featuredPlaylists,
+                                          sectionTitle: firstPlaylist.previewURL)
+                }
                 RecommendedArtistScrollView(medias: getTracksFor(.artistTopTracks),
                                             sectionTitle: HomeViewModel.Section.artistTopTracks.rawValue)
                 BigSongCoversScrollView(section: .userFavoriteArtists)

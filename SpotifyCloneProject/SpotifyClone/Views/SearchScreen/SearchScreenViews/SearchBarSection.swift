@@ -23,9 +23,10 @@ struct SearchBarSection: View {
       .frame(height: 50)
       .padding(.horizontal, Constants.paddingStandard)
       .onTapGesture {
+        guard let accessToken = searchVM.mainVM.authKey?.accessToken else { return }
         searchVM.changeSubpageTo(.activeSearching,
                                  subPageType: .search(activeSearchVM: activeSearchVM,
-                                                      accessToken: searchVM.mainVM.authKey!.accessToken))
+                                                      accessToken: accessToken))
       }
     }
   }

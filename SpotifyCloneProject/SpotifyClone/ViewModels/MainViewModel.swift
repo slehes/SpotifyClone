@@ -12,22 +12,27 @@ class MainViewModel: ObservableObject {
   @Published private(set) var authKey: AuthKey?
   @Published var currentPage: Page = .home
   @Published var currentPageWasRetapped = false
-  @Published private(set) var homeScreenIsReady = false
+  @Published private(set) var homeScreenIsReady = true
   @Published var showBottomMediaPlayer = true
   @Published private(set) var currentUserProfileInfo: SpotifyModel.CurrentUserProfileInfo?
+  @Published var isAuthenticated = false
 
   func finishAuthentication(authKey: AuthKey) {
     self.authKey = authKey
-    guard self.authKey != nil else {
-      fatalError("HomeScreen would be initiated without authKey.")
-    }
+    self.isAuthenticated = true
     homeScreenIsReady = true
   }
 
   func getCurrentUserInfo() {
-    api.getCurrentUserInfo(with: authKey!.accessToken) { [unowned self] userInfo in
+    guard let accessToken = authKey?.accessToken else { return }
+    api.getCurrentUserInfo(with: accessToken) { [unowned self] userInfo in
       self.currentUserProfileInfo = userInfo
     }
+  }
+
+  func logout() {
+    authKey = nil
+    isAuthenticated = false
   }
 
   enum Page {

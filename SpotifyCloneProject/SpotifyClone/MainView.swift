@@ -16,6 +16,7 @@ struct MainView: View {
   @StateObject var mediaDetailVM: MediaDetailViewModel
 
   @StateObject var activeSearchVM = ActiveSearchViewModel()
+  @State private var showAuthSheet = false
 
   init(mainViewModel: MainViewModel) {
     _mainVM = StateObject(wrappedValue: mainViewModel)
@@ -27,35 +28,38 @@ struct MainView: View {
   }
 
   var body: some View {
-    if mainVM.homeScreenIsReady {
-      ZStack {
-        Color.spotifyDarkGray.ignoresSafeArea()
-        switch mainVM.currentPage {
-        case .home:
-          HomeScreen()
-            .environmentObject(homeVM)
-            .environmentObject(mediaDetailVM)
-        case .search:
-          SearchScreen()
-            .environmentObject(searchVM)
-            .environmentObject(activeSearchVM)
-            .environmentObject(mediaDetailVM)
-        case .myLibrary:
-          MyLibraryScreen()
-            .environmentObject(myLibraryVM)
-            .environmentObject(mediaDetailVM)
-        }
-        BottomBar(mainVM: mainVM, showMediaPlayer: mainVM.showBottomMediaPlayer)
+    ZStack {
+      Color.spotifyDarkGray.ignoresSafeArea()
+      switch mainVM.currentPage {
+      case .home:
+        HomeScreen()
+          .environmentObject(homeVM)
+          .environmentObject(mediaDetailVM)
+      case .search:
+        SearchScreen()
+          .environmentObject(searchVM)
+          .environmentObject(activeSearchVM)
+          .environmentObject(mediaDetailVM)
+      case .myLibrary:
+        MyLibraryScreen()
+          .environmentObject(myLibraryVM)
+          .environmentObject(mediaDetailVM)
       }
-      .onAppear { mainVM.getCurrentUserInfo() }
-      .onChange(of: mainVM.currentPage) { _ in cleanAllPages() }
-      .onChange(of: mainVM.currentPageWasRetapped) { _ in goToNoneSubview() }
-      .navigationBarTitle("")
-      .navigationBarHidden(true)
-    } else {
-      AuthScreen(authViewModel: AuthViewModel(mainViewModel: mainVM))
-        .navigationBarTitle("")
-        .navigationBarHidden(true)
+      BottomBar(mainVM: mainVM, showMediaPlayer: mainVM.showBottomMediaPlayer)
+    }
+    .onAppear { mainVM.getCurrentUserInfo() }
+    .onChange(of: mainVM.currentPage) { _ in cleanAllPages() }
+    .onChange(of: mainVM.currentPageWasRetapped) { _ in goToNoneSubview() }
+    .navigationBarTitle("")
+    .navigationBarHidden(true)
+    .sheet(isPresented: $showAuthSheet) {
+      AuthSheetView(authViewModel: authVM, isShowingSheetView: $showAuthSheet)
+    }
+    .onChange(of: mainVM.isAuthenticated) { authenticated in
+      if authenticated {
+        showAuthSheet = false
+        homeVM.fetchHomeData()
+      }
     }
   }
 
